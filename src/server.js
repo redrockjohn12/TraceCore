@@ -15,6 +15,7 @@ const PAYPAL_MODE = String(process.env.PAYPAL_MODE || 'sandbox').toLowerCase() =
 const PAYPAL_BASE = PAYPAL_MODE === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '';
 const PAYPAL_PRODUCT_ID = process.env.PAYPAL_PRODUCT_ID || '';
+const APP_URL = process.env.APP_URL || 'http://localhost:3000';
 const PAYPAL_PLAN_IDS = {};
 db.exec('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;');
 
@@ -171,4 +172,4 @@ app.get('/api/devices/:recoveryId/recovery',requireAuth,(req,res)=>{const d=getO
 app.get('/api/devices/:recoveryId/events',requireAuth,(req,res)=>{const d=getOwnedDevice(req.user.id,req.params.recoveryId);if(!d)return res.status(404).json({error:'Device not found'});const events=db.prepare(`SELECT event_type AS eventType,details,recorded_at AS recordedAt FROM security_events WHERE recovery_id=? ORDER BY id DESC`).all(d.recovery_id).map(e=>({...e,details:parseDetails(e.details)}));res.json({recoveryId:d.recovery_id,events})});
 
 app.use((err,req,res,next)=>{console.error(err);res.status(500).json({error:'Internal server error'})});
-app.listen(PORT,'0.0.0.0',()=>console.log(`TraceCore V8 running on port ${PORT}`));
+app.listen(PORT,'0.0.0.0',()=>console.log(`TraceCore V9.1 running on port ${PORT}`));

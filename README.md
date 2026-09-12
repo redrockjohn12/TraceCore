@@ -1,50 +1,113 @@
-# TraceCore V9 — Production Web & Real Payments Foundation
+# TraceCore — Device Protection & Recovery Platform
 
-TraceCore by Atlas Technologies is a device protection and recovery platform MVP.
+TraceCore by Atlas Technologies is a device protection and recovery platform MVP designed to help registered device owners manage protected devices, monitor device activity, record locations, and manage recovery events through a web-based system.
 
-## What's new in V9
-- Stripe Checkout monthly subscriptions in ZAR.
-- Stripe webhook verification and subscription lifecycle handling.
-- Automatic activation after successful checkout.
-- Renewal handling through `invoice.paid`.
-- Payment failure tracking.
-- Customer billing portal.
-- Existing customer dashboard, recovery center, security events and device APIs remain.
-- Android client is kept separate; APK work can resume later.
+## Current Version
 
-## Real payment configuration
-Set these environment variables on the production server:
+**TraceCore V9.1 — PayPal Subscription Foundation**
 
-```bash
-export STRIPE_SECRET_KEY='sk_live_...'
-export STRIPE_WEBHOOK_SECRET='whsec_...'
-export APP_URL='https://your-domain.example'
-```
+The current implementation includes account management, subscription plans, device registration, device authentication, location reporting, security events, recovery workflows, and PayPal subscription integration.
 
-Never put secret keys in browser JavaScript or commit them to Git.
+## Features
 
-Configure the Stripe webhook endpoint:
+### Account Management
+- User registration and login
+- Password hashing using Node.js `scrypt`
+- Bearer-token authentication with hashed server-side sessions
+- Personal and business account types
+- Subscription status tracking
 
-`https://your-domain.example/api/billing/webhook`
+### Device Protection
+- Register protected devices
+- Generate unique TraceCore recovery IDs
+- Device credentials for authenticated device communication
+- Device heartbeat monitoring
+- Last-seen tracking
+- Device status management
 
-Subscribe to at least:
-- `checkout.session.completed`
-- `invoice.paid`
-- `invoice.payment_failed`
-- `customer.subscription.deleted`
+### Location & Recovery
+- Record device latitude and longitude
+- Store location accuracy information
+- Retrieve device location history
+- Recovery case management
+- Lost, stolen, suspicious, recovery and recovered statuses
+- Security event history
 
-## Local development
-```bash
-npm install
-npm run init-db
-npm start
-```
+### Security Events
+TraceCore can record events including:
 
-Without `STRIPE_SECRET_KEY`, the checkout endpoint deliberately refuses to pretend a payment happened.
+- SIM changes
+- SIM removal
+- Offline/reconnected events
+- Security changes
+- Location updates
+- Factory-reset signals
 
-## Important product boundary
-A normal Android application cannot survive a factory reset by itself. Vision B requires legitimate OEM/OS/device-management integration. Offline tracking is not claimed as a current feature.
+Certain security events can automatically change a protected device to a suspicious state.
 
+### Subscription Platform
 
-## PayPal Sandbox
-This version uses PayPal subscriptions instead of Stripe. Set: PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET, PAYPAL_MODE=sandbox, APP_URL. For production webhook verification also set PAYPAL_WEBHOOK_ID. Do not commit secrets.
+TraceCore currently uses **PayPal subscriptions**.
+
+Supported plans are denominated in ZAR:
+
+| Plan | Price | Protected Devices |
+|---|---:|---:|
+| Personal | R100/month | 1 |
+| Family | R300/month | 5 |
+| Business Starter | R750/month | 10 |
+| Business | R1,500/month | 25 |
+| Business Plus | R2,500/month | 50 |
+| Enterprise | Contact sales | Up to enterprise limit |
+
+The PayPal integration includes:
+
+- PayPal subscription creation
+- Sandbox/live environment selection
+- PayPal product and billing-plan creation
+- Subscription activation
+- Payment completion handling
+- Subscription cancellation handling
+- Subscription suspension handling
+- Webhook signature verification
+
+Payment credentials are supplied through environment variables and are not stored in source code.
+
+## Technology Stack
+
+### Backend
+- Node.js
+- Express 5
+- REST APIs
+- Node.js built-in SQLite support
+- PayPal REST APIs
+
+### Database
+- SQLite
+- WAL mode
+- Foreign-key enforcement
+- Prepared SQL statements
+
+### Frontend
+- HTML
+- CSS
+- JavaScript
+- Responsive web interface
+
+### Android
+An Android client project is included separately from the web/backend application.
+
+Android development and deeper device-management integration remain ongoing areas of development.
+
+### Development Tools
+- Git
+- GitHub
+- Termux
+- Android SDK tooling
+
+## API Overview
+
+### Health
+
+```http
+GET /api/health
