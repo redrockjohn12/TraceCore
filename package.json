@@ -1,0 +1,23 @@
+{
+  "name": "tracecore",
+  "version": "9.1.0-paypal-sandbox",
+  "description": "TraceCore device protection and recovery platform MVP",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "init-db": "node src/database.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "keywords": [
+    "tracecore",
+    "device-security",
+    "recovery"
+  ],
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
