@@ -105,6 +105,28 @@ Android development and deeper device-management integration remain ongoing area
 - Termux
 - Android SDK tooling
 
+## Architecture
+
+TraceCore is structured as a client-server application:
+
+```text
+Android Client
+     │
+     ▼
+REST API (Express 5)
+     │
+     ├── Authentication & device management
+     ├── Location & security events
+     ├── Recovery workflows
+     │
+     ├──────────────► SQLite Database
+     │
+     └──────────────► PayPal APIs
+```
+
+The Android client communicates with the backend through authenticated REST API requests. The backend handles account management, protected-device operations, location records, security events, recovery workflows, and subscription-related operations.
+
+
 ## API Overview
 
 ### Health
