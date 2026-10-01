@@ -1,0 +1,23 @@
+# Secrets
+.env
+
+# Database
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Node
+node_modules/
+
+# Android / Gradle
+.gradle/
+build/
+**/build/
+local.properties
+
+# Logs
+*.log
+
+# Termux / local files
+.DS_Store

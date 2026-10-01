@@ -1,0 +1,9 @@
+{
+  "name":"tracecore-v10",
+  "version":"10.1.0",
+  "private":true,
+  "main":"src/server.js",
+  "scripts":{"start":"node src/server.js","dev":"node --watch src/server.js","db:check":"node scripts/db-check.js"},
+  "engines":{"node":">=22"},
+  "dependencies":{"dotenv":"^16.4.7","express":"^5.1.0"}
+}

@@ -1,0 +1,11 @@
+plugins { id 'com.android.application' }
+
+android { namespace 'com.atlastechnologies.tracecore'; compileSdk 34
+ defaultConfig { applicationId 'com.atlastechnologies.tracecore'; minSdk 26; targetSdk 34; versionCode 101; versionName '10.1.0'
+   buildConfigField 'String','TRACECORE_BASE_URL','"http://127.0.0.1:3000/"'
+ }
+ buildFeatures { buildConfig true }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+
+dependencies { implementation 'androidx.appcompat:appcompat:1.7.0'; implementation 'androidx.core:core:1.13.1'; implementation 'com.google.android.gms:play-services-location:21.3.0' }
