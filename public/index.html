@@ -1,1 +1,471 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1220"><title>TraceCore | Device Protection & Recovery</title><link rel="manifest" href="/manifest.json"><link rel="stylesheet" href="/style.css"></head><body><header><div class="brand"><div class="logo">TC</div><div><b>TraceCore</b><small>Protection & Recovery</small></div></div><button id="logout" class="ghost hidden">Logout</button></header><main><section id="authView"><div class="hero"><span class="pill">TraceCore 10</span><h1>Protect your devices.<br>Know their last reported location.</h1><p>Register devices, monitor status, keep recovery IDs, and report GPS locations securely.</p></div><div class="grid two"><form id="loginForm" class="card"><h2>Sign in</h2><input id="loginEmail" type="email" placeholder="Email" required><input id="loginPassword" type="password" placeholder="Password" required><button>Sign in</button><p id="loginMsg" class="msg"></p></form><form id="registerForm" class="card"><h2>Create account</h2><input id="regName" placeholder="Full name" required><input id="regEmail" type="email" placeholder="Email" required><input id="regPassword" type="password" minlength="8" placeholder="Password (8+ characters)" required><button>Create account</button><p id="regMsg" class="msg"></p></form></div></section><section id="appView" class="hidden"><div class="hero compact"><span id="planBadge" class="pill"></span><h1 id="welcome"></h1><p>Manage protection, recovery and device location from one dashboard.</p></div><div class="grid three" id="plans"></div><div class="grid two"><section class="card"><h2>Add device</h2><form id="deviceForm"><input id="deviceName" placeholder="Device name" required><select id="platform"><option>Android</option><option>iOS</option><option>Windows</option><option>macOS</option><option>Linux</option></select><input id="manufacturer" placeholder="Manufacturer"><input id="model" placeholder="Model"><input id="serial" placeholder="Serial number (optional)"><input id="imei" placeholder="IMEI (optional)"><select id="management"><option value="personal">Personal</option><option value="managed">Managed / Device Owner</option></select><button>Register device</button></form><p id="deviceMsg" class="msg"></p></section><section class="card"><h2>Family</h2><p class="muted">Family plan supports up to 5 devices across the owner and members.</p><form id="inviteForm"><input id="inviteEmail" type="email" placeholder="Family member email"><button>Generate invite</button></form><p id="inviteMsg" class="msg"></p><div id="familyList"></div></section></div><section class="card"><div class="sectionHead"><h2>Your protected devices</h2><button id="refresh" class="ghost">Refresh</button></div><div id="devices" class="deviceList"></div></section></section></main><dialog id="tokenDialog"><div class="card"><h2>Save device credential</h2><p>This token is shown only once. Save it securely.</p><textarea id="tokenOut" readonly></textarea><div class="actions"><button id="copyToken">Copy token</button><button id="closeDialog" class="ghost">Close</button></div></div></dialog><script src="/app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="TraceCore device protection and recovery platform.">
+  <title>TraceCore | Protect. Locate. Recover.</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brandMark">TC</div>
+    <div>
+      <strong>TraceCore</strong>
+      <span>Protection & Recovery</span>
+    </div>
+  </div>
+
+  <nav id="publicNav">
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#how">How it works</a>
+    <button class="navButton" onclick="showLogin()">Sign in</button>
+  </nav>
+
+  <div id="customerNav" class="hidden customerNav">
+    <span id="navUser"></span>
+    <button class="navButton" onclick="logoutUser()">Logout</button>
+  </div>
+</header>
+
+<main>
+
+<!-- PUBLIC WEBSITE -->
+<section id="landingView">
+
+  <section class="hero">
+    <div class="heroContent">
+      <span class="eyebrow">DEVICE PROTECTION PLATFORM</span>
+
+      <h1>Protect your phone.<br><span>Find your way back.</span></h1>
+
+      <p class="heroText">
+        TraceCore helps you protect your devices, monitor their security
+        status and access recovery information when something goes wrong.
+      </p>
+
+      <div class="heroActions">
+        <button class="primaryButton" onclick="showRegister()">
+          Protect a device
+        </button>
+        <button class="secondaryButton" onclick="showLogin()">
+          Sign in
+        </button>
+      </div>
+
+      <div class="trustRow">
+        <span>✓ Secure account</span>
+        <span>✓ Device protection</span>
+        <span>✓ Recovery tools</span>
+      </div>
+    </div>
+
+    <div class="heroCard">
+      <div class="phoneTop">
+        <span>TraceCore</span>
+        <span class="onlineDot">● Protected</span>
+      </div>
+
+      <div class="phoneIcon">📱</div>
+
+      <h3>Your device is protected</h3>
+      <p>Recovery information and security activity in one place.</p>
+
+      <div class="miniLocation">
+        <div class="locationIcon">⌖</div>
+        <div>
+          <small>Last reported location</small>
+          <strong>Available from your dashboard</strong>
+        </div>
+      </div>
+
+      <div class="miniStatus">
+        <span>Protection active</span>
+        <b>●</b>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="section">
+    <div class="sectionIntro">
+      <span class="eyebrow">WHY TRACECORE</span>
+      <h2>One place for your devices.</h2>
+      <p>Simple tools designed around protecting and recovering the devices that matter to you.</p>
+    </div>
+
+    <div class="featureGrid">
+      <article class="featureCard">
+        <div class="featureIcon">🛡️</div>
+        <h3>Device Protection</h3>
+        <p>Register your devices and keep their recovery identity connected to your account.</p>
+      </article>
+
+      <article class="featureCard">
+        <div class="featureIcon">📍</div>
+        <h3>Location Reporting</h3>
+        <p>View the latest location information reported by a connected protected device.</p>
+      </article>
+
+      <article class="featureCard">
+        <div class="featureIcon">🚨</div>
+        <h3>Lost & Stolen</h3>
+        <p>Quickly change the protection status of a device when it goes missing.</p>
+      </article>
+
+      <article class="featureCard">
+        <div class="featureIcon">🔐</div>
+        <h3>Recovery Center</h3>
+        <p>Keep important recovery information and security activity accessible from your account.</p>
+      </article>
+
+      <article class="featureCard">
+        <div class="featureIcon">👨‍👩‍👧</div>
+        <h3>Family Protection</h3>
+        <p>Family plans allow protection of multiple devices under one account.</p>
+      </article>
+
+      <article class="featureCard">
+        <div class="featureIcon">💻</div>
+        <h3>Multiple Platforms</h3>
+        <p>Designed to grow across Android, Windows, macOS, Linux and other supported platforms.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="how" class="section darkSection">
+    <div class="sectionIntro light">
+      <span class="eyebrow">HOW IT WORKS</span>
+      <h2>Protection in three steps.</h2>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="stepNumber">01</div>
+        <h3>Create your account</h3>
+        <p>Register your TraceCore account and choose a protection plan.</p>
+      </div>
+
+      <div class="step">
+        <div class="stepNumber">02</div>
+        <h3>Connect your device</h3>
+        <p>Register your device and connect the TraceCore application.</p>
+      </div>
+
+      <div class="step">
+        <div class="stepNumber">03</div>
+        <h3>Recover when needed</h3>
+        <p>Log in from anywhere to manage your protected device and recovery information.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="section pricingSection">
+    <div class="sectionIntro">
+      <span class="eyebrow">PLANS</span>
+      <h2>Protection that grows with you.</h2>
+      <p>Choose the number of devices you need to protect.</p>
+    </div>
+
+    <div id="publicPlans" class="pricingGrid">
+      <div class="loadingCard">Loading plans...</div>
+    </div>
+  </section>
+
+  <section class="ctaSection">
+    <div>
+      <span class="eyebrow">READY TO PROTECT YOUR DEVICE?</span>
+      <h2>Start with TraceCore today.</h2>
+      <p>Create your account and take control of your device recovery information.</p>
+    </div>
+    <button class="primaryButton lightButton" onclick="showRegister()">Create account</button>
+  </section>
+
+</section>
+
+
+<!-- AUTH -->
+<section id="authView" class="authView hidden">
+
+  <div class="authPanel">
+    <button class="backButton" onclick="showLanding()">← Back</button>
+
+    <div class="authBrand">
+      <div class="brandMark large">TC</div>
+      <h1 id="authTitle">Welcome back</h1>
+      <p id="authSubtitle">Sign in to your TraceCore account.</p>
+    </div>
+
+    <form id="loginForm" class="authForm">
+      <label>Email address</label>
+      <input id="loginEmail" type="email" autocomplete="email" required>
+
+      <label>Password</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" required>
+
+      <button class="primaryButton full" type="submit">Sign in</button>
+
+      <div id="loginMsg" class="formMessage"></div>
+    </form>
+
+    <form id="registerForm" class="authForm hidden">
+      <label>Full name</label>
+      <input id="regName" autocomplete="name" required>
+
+      <label>Email address</label>
+      <input id="regEmail" type="email" autocomplete="email" required>
+
+      <label>Password</label>
+      <input id="regPassword" type="password" minlength="8" autocomplete="new-password" required>
+
+      <div class="passwordHint">Use at least 8 characters.</div>
+
+      <button class="primaryButton full" type="submit">Create account</button>
+
+      <div id="regMsg" class="formMessage"></div>
+    </form>
+
+    <div class="authSwitch">
+      <span id="switchText">Don't have an account?</span>
+      <button onclick="toggleAuthMode()" id="switchButton">Create account</button>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- CUSTOMER DASHBOARD -->
+<section id="appView" class="dashboard hidden">
+
+  <div class="dashboardHero">
+    <div>
+      <span class="eyebrow">CUSTOMER DASHBOARD</span>
+      <h1 id="welcome">Welcome</h1>
+      <p>Manage your protection, devices and recovery information.</p>
+    </div>
+
+    <div class="planBadge" id="planBadge">No active plan</div>
+  </div>
+
+  <div class="dashboardGrid">
+
+    <div class="dashboardMain">
+
+      <section class="dashboardCard overviewCard">
+        <div class="cardHeading">
+          <div>
+            <span class="cardEyebrow">OVERVIEW</span>
+            <h2>Your protection</h2>
+          </div>
+          <div class="shieldIcon">🛡️</div>
+        </div>
+
+        <div class="overviewStats">
+          <div>
+            <strong id="deviceCount">0</strong>
+            <span>Protected devices</span>
+          </div>
+          <div>
+            <strong id="activePlanName">—</strong>
+            <span>Current plan</span>
+          </div>
+          <div>
+            <strong id="deviceLimit">—</strong>
+            <span>Device limit</span>
+          </div>
+        </div>
+      </section>
+
+
+      <section class="dashboardCard">
+        <div class="cardHeading">
+          <div>
+            <span class="cardEyebrow">DEVICES</span>
+            <h2>Your protected devices</h2>
+          </div>
+          <button class="smallButton" onclick="scrollToRegisterDevice()">+ Add device</button>
+        </div>
+
+        <div id="devices" class="deviceList">
+          <div class="emptyState">Loading devices...</div>
+        </div>
+      </section>
+
+
+      <section class="dashboardCard">
+        <div class="cardHeading">
+          <div>
+            <span class="cardEyebrow">RECOVERY</span>
+            <h2>Recovery Center</h2>
+          </div>
+          <div class="recoveryIcon">⌖</div>
+        </div>
+
+        <p class="cardDescription">
+          If your device is lost or stolen, use the device controls above
+          to update its status and access the latest information reported by it.
+        </p>
+
+        <div class="recoverySteps">
+          <div><b>1</b><span>Identify the device</span></div>
+          <div><b>2</b><span>Change its protection status</span></div>
+          <div><b>3</b><span>Review the latest reported location</span></div>
+        </div>
+      </section>
+
+    </div>
+
+
+    <aside class="dashboardSide">
+
+      <section class="dashboardCard" id="registerDeviceSection">
+        <div class="cardHeading">
+          <div>
+            <span class="cardEyebrow">NEW DEVICE</span>
+            <h2>Protect a device</h2>
+          </div>
+        </div>
+
+        <form id="deviceForm" class="deviceForm">
+
+          <label>Device name</label>
+          <input id="deviceName" placeholder="e.g. My Samsung Phone" required>
+
+          <label>Platform</label>
+          <select id="platform">
+            <option>Android</option>
+            <option>iOS</option>
+            <option>Windows</option>
+            <option>macOS</option>
+            <option>Linux</option>
+          </select>
+
+          <label>Manufacturer</label>
+          <input id="manufacturer" placeholder="Samsung, Apple, Dell...">
+
+          <label>Model</label>
+          <input id="model" placeholder="Device model" required>
+
+          <label>Serial number <span>optional</span></label>
+          <input id="serial" placeholder="Serial number">
+
+          <label>IMEI <span>optional</span></label>
+          <input id="imei" placeholder="IMEI">
+
+          <label>Management</label>
+          <select id="management">
+            <option value="personal">Personal</option>
+            <option value="managed">Managed / Device Owner</option>
+          </select>
+
+          <button class="primaryButton full" type="submit">Register device</button>
+
+          <div id="deviceMsg" class="formMessage"></div>
+        </form>
+      </section>
+
+
+      <section class="dashboardCard">
+        <div class="cardHeading">
+          <div>
+            <span class="cardEyebrow">FAMILY</span>
+            <h2>Family protection</h2>
+          </div>
+        </div>
+
+        <p class="cardDescription">
+          Family plans can protect multiple devices across family members.
+        </p>
+
+        <form id="inviteForm" class="deviceForm">
+          <label>Family member email</label>
+          <input id="inviteEmail" type="email" placeholder="name@email.com">
+
+          <button class="secondaryButton full" type="submit">Generate invite</button>
+
+          <div id="inviteMsg" class="formMessage"></div>
+        </form>
+
+        <div id="familyList" class="familyList"></div>
+      </section>
+
+
+      <section class="dashboardCard">
+        <div class="cardHeading">
+          <div>
+            <span class="cardEyebrow">SUBSCRIPTION</span>
+            <h2>Your plan</h2>
+          </div>
+        </div>
+
+        <div id="currentPlan" class="currentPlan">
+          <div class="loadingText">Loading...</div>
+        </div>
+
+        <div id="plans" class="miniPlans"></div>
+
+        <div id="paymentBox" class="paymentBox hidden">
+          <div class="paymentBoxHeader">
+            <span class="cardEyebrow">PAYMENT</span>
+            <strong>Payment order</strong>
+          </div>
+
+          <div id="paymentDetails"></div>
+        </div>
+      </section>
+
+    </aside>
+
+  </div>
+
+</section>
+
+</main>
+
+
+<!-- DEVICE TOKEN DIALOG -->
+<dialog id="tokenDialog">
+  <div class="dialogContent">
+    <div class="dialogIcon">🔐</div>
+    <h2>Device connected</h2>
+
+    <p>
+      This device credential is shown only once.
+      Save it securely.
+    </p>
+
+    <textarea id="tokenOut" readonly></textarea>
+
+    <div class="dialogWarning">
+      Never share this credential with another person.
+    </div>
+
+    <div class="dialogActions">
+      <button id="copyToken" class="primaryButton">Copy credential</button>
+      <button id="closeDialog" class="secondaryButton">Close</button>
+    </div>
+  </div>
+</dialog>
+
+
+<footer>
+  <div class="footerBrand">
+    <div class="brandMark">TC</div>
+    <div>
+      <strong>TraceCore</strong>
+      <span>Protection & Recovery</span>
+    </div>
+  </div>
+
+  <p>© 2026 TraceCore — Designed by Atlas Technologies.</p>
+</footer>
+
+<script src="/app.js"></script>
+
+</body>
+</html>

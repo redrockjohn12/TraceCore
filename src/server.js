@@ -37,9 +37,12 @@ function migrate(){
 migrate();
 
 const PLANS={
- individual:{name:'Individual',priceMinor:10000,currency:'ZAR',maxDevices:1},
+ personal:{name:'Personal',priceMinor:10000,currency:'ZAR',maxDevices:1},
  family:{name:'Family',priceMinor:30000,currency:'ZAR',maxDevices:5},
- business:{name:'Business',priceMinor:100000,currency:'ZAR',maxDevices:20}
+ family_plus:{name:'Family Plus',priceMinor:75000,currency:'ZAR',maxDevices:10},
+ business_starter:{name:'Business Starter',priceMinor:150000,currency:'ZAR',maxDevices:25},
+ business:{name:'Business',priceMinor:250000,currency:'ZAR',maxDevices:50},
+ business_plus:{name:'Business Plus',priceMinor:500000,currency:'ZAR',maxDevices:100}
 };
 const now=()=>new Date().toISOString();
 const hash=s=>crypto.createHash('sha256').update(String(s)).digest('hex');
@@ -54,7 +57,7 @@ function planFor(id){const s=subFor(id);return s?PLANS[s.plan]:null}
 function accessibleIds(id){const root=ownerId(id);const rows=db.prepare('SELECT member_user_id FROM family_members WHERE owner_user_id=?').all(root);return [root,...rows.map(r=>r.member_user_id)];}
 function devicesFor(id){const ids=accessibleIds(id);const qs=ids.map(()=>'?').join(',');return db.prepare(`SELECT d.*,u.name owner_name FROM devices d JOIN users u ON u.id=d.user_id WHERE d.user_id IN (${qs}) ORDER BY d.id DESC`).all(...ids)}
 function getDevice(id,recoveryId){const ids=accessibleIds(id);const qs=ids.map(()=>'?').join(',');return db.prepare(`SELECT * FROM devices WHERE recovery_id=? AND user_id IN (${qs})`).get(recoveryId,...ids)}
-function activate(id,planId,provider='paypal',providerId=null){const p=PLANS[planId],start=new Date(),end=new Date(Date.now()+31*86400000);db.prepare("UPDATE subscriptions SET status='cancelled',payment_status='replaced' WHERE user_id=? AND status='active'").run(id);db.prepare(`INSERT INTO subscriptions(user_id,plan,price_minor,currency,status,provider,payment_status,provider_subscription_id,started_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?)`).run(id,planId,p.priceMinor,p.currency,'active',provider,'paid',providerId,start.toISOString(),end.toISOString());return directSub(id)}
+function activate(id,planId,provider='manual',providerId=null){const p=PLANS[planId],start=new Date(),end=new Date(Date.now()+31*86400000);db.prepare("UPDATE subscriptions SET status='cancelled',payment_status='replaced' WHERE user_id=? AND status='active'").run(id);db.prepare(`INSERT INTO subscriptions(user_id,plan,price_minor,currency,status,provider,payment_status,provider_subscription_id,started_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?)`).run(id,planId,p.priceMinor,p.currency,'active',provider,'paid',providerId,start.toISOString(),end.toISOString());return directSub(id)}
 function requireSub(req,res,next){const s=subFor(req.user.id);if(!s)return res.status(402).json({error:'An active subscription is required'});req.subscription=s;req.plan=PLANS[s.plan];req.subscriptionOwnerId=ownerId(req.user.id);next()}
 function auth(req,res,next){const h=req.headers.authorization||'';const raw=h.startsWith('Bearer ')?h.slice(7):'';if(!raw)return res.status(401).json({error:'Authentication required'});const s=db.prepare('SELECT * FROM sessions WHERE token_hash=? AND expires_at>?').get(hash(raw),now());if(!s)return res.status(401).json({error:'Session expired or invalid'});req.user=user(s.user_id);if(!req.user)return res.status(401).json({error:'User not found'});req.session=s;next()}
 function deviceAuth(req,res,next){const raw=req.headers['x-device-token']||req.body?.deviceToken||'';if(!raw)return res.status(401).json({error:'Device token required'});const d=db.prepare('SELECT * FROM devices WHERE device_token_hash=?').get(hash(raw));if(!d)return res.status(401).json({error:'Invalid device token'});d.last_seen_at=now();db.prepare('UPDATE devices SET last_seen_at=? WHERE id=?').run(d.last_seen_at,d.id);req.device=d;next()}
@@ -69,11 +72,63 @@ app.post('/api/auth/login',(req,res)=>{const email=String(req.body.email||'').tr
 app.post('/api/auth/logout',auth,(req,res)=>{db.prepare('DELETE FROM sessions WHERE id=?').run(req.session.id);res.json({ok:true})});
 app.get('/api/me',auth,(req,res)=>{const s=subFor(req.user.id),p=s?PLANS[s.plan]:null;res.json({user:req.user,subscription:s,plan:p,devices:devicesFor(req.user.id)})});
 app.get('/api/subscriptions/current',auth,(req,res)=>{const s=subFor(req.user.id);res.json({subscription:s,plan:s?PLANS[s.plan]:null})});
-app.get('/api/billing/config',(req,res)=>res.json({paypalConfigured:!!(process.env.PAYPAL_CLIENT_ID&&process.env.PAYPAL_CLIENT_SECRET),mode:process.env.PAYPAL_MODE||'sandbox'}));
+app.get('/api/billing/config',(req,res)=>res.json({
+  provider:'manual',
+  automaticPayments:false,
+  futureProvider:'fnb'
+}));
 
-async function paypalToken(){const id=process.env.PAYPAL_CLIENT_ID,secret=process.env.PAYPAL_CLIENT_SECRET;if(!id||!secret)throw new Error('PayPal is not configured');const base=(process.env.PAYPAL_MODE||'sandbox')==='live'?'https://api-m.paypal.com':'https://api-m.sandbox.paypal.com';const r=await fetch(base+'/v1/oauth2/token',{method:'POST',headers:{Authorization:'Basic '+Buffer.from(id+':'+secret).toString('base64'),'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=client_credentials'});if(!r.ok)throw new Error('PayPal authentication failed');return {base,token:(await r.json()).access_token}}
-app.post('/api/billing/paypal/create-order',auth,async(req,res)=>{try{const planId=String(req.body.plan||'');const p=PLANS[planId];if(!p)return res.status(400).json({error:'Unknown plan'});const pp=await paypalToken();const returnUrl=`${APP_URL}/?paypal=success`;const cancelUrl=`${APP_URL}/?paypal=cancelled`;const r=await fetch(pp.base+'/v2/checkout/orders',{method:'POST',headers:{Authorization:'Bearer '+pp.token,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify({intent:'CAPTURE',purchase_units:[{reference_id:`tc-${req.user.id}-${planId}`,description:`TraceCore ${p.name} plan`,amount:{currency_code:p.currency,value:(p.priceMinor/100).toFixed(2)}}],application_context:{brand_name:'TraceCore',user_action:'PAY_NOW',return_url:returnUrl,cancel_url:cancelUrl}})});const data=await r.json();if(!r.ok)throw new Error(data.message||'PayPal order creation failed');db.prepare('INSERT INTO payment_orders(provider,provider_order_id,user_id,plan,amount_minor,currency,status,created_at) VALUES(?,?,?,?,?,?,?,?)').run('paypal',data.id,req.user.id,planId,p.priceMinor,p.currency,'created',now());const approve=(data.links||[]).find(x=>x.rel==='approve')?.href;res.json({ok:true,orderId:data.id,approveUrl:approve});}catch(e){res.status(502).json({error:e.message})}});
-app.post('/api/billing/paypal/capture-order',auth,async(req,res)=>{try{const orderId=String(req.body.orderId||'');const o=db.prepare('SELECT * FROM payment_orders WHERE provider_order_id=? AND user_id=?').get(orderId,req.user.id);if(!o)return res.status(404).json({error:'Payment order not found'});if(o.status==='captured')return res.json({ok:true,subscription:directSub(req.user.id)});const pp=await paypalToken();const r=await fetch(pp.base+'/v2/checkout/orders/'+encodeURIComponent(orderId)+'/capture',{method:'POST',headers:{Authorization:'Bearer '+pp.token,'Content-Type':'application/json','Prefer':'return=representation'}});const data=await r.json();if(!r.ok)throw new Error(data.message||'PayPal capture failed');const cap=data.purchase_units?.[0]?.payments?.captures?.[0];const value=Number(cap?.amount?.value||0);if(data.status!=='COMPLETED'||cap?.status!=='COMPLETED'||Math.round(value*100)!==o.amount_minor)throw new Error('Payment was not completed or amount did not match');db.prepare("UPDATE payment_orders SET status='captured',captured_at=? WHERE id=?").run(now(),o.id);const s=activate(req.user.id,o.plan,'paypal',orderId);res.json({ok:true,subscription:s,plan:PLANS[o.plan]});}catch(e){res.status(502).json({error:e.message})}});
+app.post('/api/billing/create-order',auth,(req,res)=>{
+  try{
+    const planId=String(req.body.plan||'');
+    const p=PLANS[planId];
+
+    if(!p)return res.status(400).json({error:'Unknown plan'});
+
+    const providerOrderId=`TC-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+
+    db.prepare(`
+      INSERT INTO payment_orders
+      (provider,provider_order_id,user_id,plan,amount_minor,currency,status,created_at)
+      VALUES(?,?,?,?,?,?,?,?)
+    `).run(
+      'manual',
+      providerOrderId,
+      req.user.id,
+      planId,
+      p.priceMinor,
+      p.currency,
+      'pending',
+      now()
+    );
+
+    res.json({
+      ok:true,
+      orderId:providerOrderId,
+      status:'pending',
+      plan:p,
+      payment:{
+        provider:'manual',
+        message:'Payment instructions will be provided after order creation.'
+      }
+    });
+  }catch(e){
+    res.status(500).json({error:e.message});
+  }
+});
+
+app.get('/api/billing/order/:orderId',auth,(req,res)=>{
+  const order=db.prepare(`
+    SELECT *
+    FROM payment_orders
+    WHERE provider_order_id=? AND user_id=?
+  `).get(String(req.params.orderId),req.user.id);
+
+  if(!order)return res.status(404).json({error:'Payment order not found'});
+
+  res.json({ok:true,order});
+});
+
 app.post('/api/subscriptions/manual-activate',auth,(req,res)=>{if(process.env.NODE_ENV==='production'||process.env.ALLOW_MANUAL_ACTIVATION!=='true'||String(req.headers['x-admin-key']||'')!==String(process.env.ADMIN_KEY||''))return res.status(403).json({error:'Manual activation is disabled'});const planId=String(req.body.plan||'');if(!PLANS[planId])return res.status(400).json({error:'Unknown plan'});res.json({ok:true,subscription:activate(req.user.id,planId,'manual_admin')})});
 
 app.get('/api/family',auth,requireSub,(req,res)=>{if(req.subscription.plan!=='family')return res.status(400).json({error:'Family plan required'});const root=ownerId(req.user.id);const members=db.prepare('SELECT fm.id,u.id user_id,u.name,u.email,fm.created_at FROM family_members fm JOIN users u ON u.id=fm.member_user_id WHERE fm.owner_user_id=?').all(root);const invites=db.prepare('SELECT id,email,expires_at,accepted_at FROM family_invites WHERE owner_user_id=? ORDER BY id DESC').all(root);res.json({owner:user(root),members,invites})});
